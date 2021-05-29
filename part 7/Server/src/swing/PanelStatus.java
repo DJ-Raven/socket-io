@@ -44,7 +44,7 @@ public class PanelStatus extends javax.swing.JLayeredPane {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        setOpaque(false);
+        setOpaque(true);
         setLayout(new javax.swing.BoxLayout(this, javax.swing.BoxLayout.Y_AXIS));
     }// </editor-fold>//GEN-END:initComponents
 

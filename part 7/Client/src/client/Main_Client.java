@@ -39,12 +39,15 @@ public class Main_Client extends javax.swing.JFrame {
         table.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable jtable, Object o, boolean bln, boolean bln1, int i, int i1) {
+                Component com = super.getTableCellRendererComponent(jtable, o, bln, bln1, i, i1);
                 Object data = jtable.getValueAt(i, 0);
                 if (data instanceof DataReader) {
                     DataReader reader = (DataReader) data;
-                    return reader.getStatus();
+                    Component c = reader.getStatus();
+                    c.setBackground(com.getBackground());
+                    return c;
                 } else {
-                    return super.getTableCellRendererComponent(jtable, o, bln, bln1, i, i1);
+                    return com;
                 }
             }
         });
@@ -52,8 +55,11 @@ public class Main_Client extends javax.swing.JFrame {
         tableFile.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable jtable, Object o, boolean bln, boolean bln1, int i, int i1) {
+                Component com = super.getTableCellRendererComponent(jtable, o, bln, bln1, i, i1);
                 DataFileServer data = (DataFileServer) jtable.getValueAt(i, 0);
-                return data.getItem();
+                Component c = data.getItem();
+                c.setBackground(com.getBackground());
+                return c;
             }
         });
         tableFile.getColumnModel().getColumn(4).setCellEditor(new CellEditorFile());
@@ -224,43 +230,47 @@ public class Main_Client extends javax.swing.JFrame {
     private Socket client;
     private String IP = "localhost";
     private void cmdConnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmdConnectActionPerformed
-        try {
-            client = IO.socket("http://" + IP + ":" + DEFAULT_PORT);
-            //  Add event to client
-            client.on("exit_app", new Emitter.Listener() {
-                @Override
-                public void call(Object... os) {
-                    System.exit(0);
-                }
-            });
-            client.on("new_file", new Emitter.Listener() {
-                @Override
-                public void call(Object... os) {
-                    //  Add new File
-                    try {
-                        addFile(new DataFileServer((JSONObject) os[0], table, client));
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+        if (client == null) {
+            try {
+                client = IO.socket("http://" + IP + ":" + DEFAULT_PORT);
+                //  Add event to client
+                client.on("exit_app", new Emitter.Listener() {
+                    @Override
+                    public void call(Object... os) {
+                        System.exit(0);
                     }
-                }
-            });
-            client.open();
-            String userName = txtName.getText().trim();
-            client.emit("set_user", userName);
-            client.emit("request", "list_file", new Ack() {
-                @Override
-                public void call(Object... os) {
-                    try {
-                        for (Object o : os) {
-                            addFile(new DataFileServer((JSONObject) o, table, client));
+                });
+                client.on("new_file", new Emitter.Listener() {
+                    @Override
+                    public void call(Object... os) {
+                        //  Add new File
+                        try {
+                            addFile(new DataFileServer((JSONObject) os[0], table, client));
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
                     }
-                }
-            });
-        } catch (URISyntaxException e) {
-            System.err.println(e);
+                });
+                client.open();
+                String userName = txtName.getText().trim();
+                client.emit("set_user", userName);
+                client.emit("request", "list_file", new Ack() {
+                    @Override
+                    public void call(Object... os) {
+                        try {
+                            for (Object o : os) {
+                                addFile(new DataFileServer((JSONObject) o, table, client));
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+            } catch (URISyntaxException e) {
+                System.err.println(e);
+            }
+        } else {
+            client.emit("set_user", txtName.getText().trim());
         }
     }//GEN-LAST:event_cmdConnectActionPerformed
 

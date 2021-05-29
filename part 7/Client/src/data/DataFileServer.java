@@ -108,6 +108,14 @@ public class DataFileServer {
             @Override
             public void actionPerformed(ActionEvent ae) {
                 //    Pause and resume
+                if (!item.isPause() && pause) {
+                    pause = false;
+                    try {
+                        saveFile();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         });
     }
@@ -122,6 +130,7 @@ public class DataFileServer {
     private JTable table;
     private DataWriter writer;
     private Socket socket;
+    private boolean pause;
 
     private void saveFile() throws IOException, JSONException {
         //  Start Write file here
@@ -142,7 +151,11 @@ public class DataFileServer {
                         writer.writeFile(b);
                         item.showStatus((int) writer.getPercentage());
                         table.repaint();
-                        saveFile();
+                        if (!item.isPause()) {
+                            saveFile();
+                        } else {
+                            pause = true;
+                        }
                     } else {
                         item.showStatus((int) writer.getPercentage());
                         item.done();

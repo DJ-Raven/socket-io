@@ -43,11 +43,14 @@ public class Server extends javax.swing.JFrame {
         table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable jtable, Object o, boolean bln, boolean bln1, int i, int i1) {
+                Component com = super.getTableCellRendererComponent(jtable, o, bln, bln1, i, i1);
                 Object data = jtable.getValueAt(i, 0);
                 if (data instanceof DataClient) {
-                    return ((DataClient) data).getStatus();
+                    Component c = ((DataClient) data).getStatus();
+                    c.setBackground(com.getBackground());
+                    return c;
                 } else {
-                    return super.getTableCellRendererComponent(jtable, o, bln, bln1, i, i1);
+                    return com;
                 }
             }
         });
@@ -142,95 +145,98 @@ public class Server extends javax.swing.JFrame {
 
     private final int DEFAULT_PORT = 9999;
     private final List<DataFileServer> listFiles = new ArrayList<>();
+    private SocketIOServer server;
     private void cmdStartActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_cmdStartActionPerformed
-        Configuration configuration = new Configuration();
-        configuration.setPort(DEFAULT_PORT);
-        SocketIOServer server = new SocketIOServer(configuration);
-        //  Addd event to server when client connected
-        server.addConnectListener(new ConnectListener() {
-            @Override
-            public void onConnect(SocketIOClient sioc) {
-                //  This method run when new client connected
-                //  Name not yet have
-                DataClient client = new DataClient(sioc, "", table);
-                //  Add this data to table
-                addTableRow(client);
-            }
-        });
-        server.addDisconnectListener(new DisconnectListener() {
-            @Override
-            public void onDisconnect(SocketIOClient sioc) {
-                removeClient(sioc);
-            }
-        });
-        server.addEventListener("set_user", String.class, new DataListener<String>() {
-            @Override
-            public void onData(SocketIOClient sioc, String t, AckRequest ar) throws Exception {
-                setUserName(sioc, t);
-            }
-        });
-        server.addEventListener("send_file", DataInitFile.class, new DataListener<DataInitFile>() {
-            @Override
-            public void onData(SocketIOClient sioc, DataInitFile t, AckRequest ar) throws Exception {
-                int fileID = initFileTransfer(sioc, t);
-                if (fileID > 0) {
-                    //  call back function to client
-                    ar.sendAckData(true, fileID);
+        if (server == null) {
+            Configuration configuration = new Configuration();
+            configuration.setPort(DEFAULT_PORT);
+            server = new SocketIOServer(configuration);
+            //  Addd event to server when client connected
+            server.addConnectListener(new ConnectListener() {
+                @Override
+                public void onConnect(SocketIOClient sioc) {
+                    //  This method run when new client connected
+                    //  Name not yet have
+                    DataClient client = new DataClient(sioc, "", table);
+                    //  Add this data to table
+                    addTableRow(client);
                 }
-            }
-        });
-        server.addEventListener("sending", DataFileSending.class, new DataListener<DataFileSending>() {
-            @Override
-            public void onData(SocketIOClient sioc, DataFileSending t, AckRequest ar) throws Exception {
-                if (!t.isFinish()) {
-                    writeFile(sioc, t);
-                    ar.sendAckData(true);
-                } else {
-                    //  file finish
-                    //  you can remove this code
-                    ar.sendAckData(false);
-                    DataFileServer data = closeFile(sioc, t);
-                    if (data != null) {
-                        server.getBroadcastOperations().sendEvent("new_file", data);
+            });
+            server.addDisconnectListener(new DisconnectListener() {
+                @Override
+                public void onDisconnect(SocketIOClient sioc) {
+                    removeClient(sioc);
+                }
+            });
+            server.addEventListener("set_user", String.class, new DataListener<String>() {
+                @Override
+                public void onData(SocketIOClient sioc, String t, AckRequest ar) throws Exception {
+                    setUserName(sioc, t);
+                }
+            });
+            server.addEventListener("send_file", DataInitFile.class, new DataListener<DataInitFile>() {
+                @Override
+                public void onData(SocketIOClient sioc, DataInitFile t, AckRequest ar) throws Exception {
+                    int fileID = initFileTransfer(sioc, t);
+                    if (fileID > 0) {
+                        //  call back function to client
+                        ar.sendAckData(true, fileID);
                     }
                 }
-            }
-        });
-        server.addEventListener("r_f_l", Integer.class, new DataListener<Integer>() {
-            @Override
-            public void onData(SocketIOClient sioc, Integer t, AckRequest ar) throws Exception {
-                try {
-                    long length = getFileLength(sioc, t);
-                    if (length > 0) {
-                        ar.sendAckData(length + "");
+            });
+            server.addEventListener("sending", DataFileSending.class, new DataListener<DataFileSending>() {
+                @Override
+                public void onData(SocketIOClient sioc, DataFileSending t, AckRequest ar) throws Exception {
+                    if (!t.isFinish()) {
+                        writeFile(sioc, t);
+                        ar.sendAckData(true);
+                    } else {
+                        //  file finish
+                        //  you can remove this code
+                        ar.sendAckData(false);
+                        DataFileServer data = closeFile(sioc, t);
+                        if (data != null) {
+                            server.getBroadcastOperations().sendEvent("new_file", data);
+                        }
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
-            }
-        });
-        server.addEventListener("request", String.class, new DataListener<String>() {
-            @Override
-            public void onData(SocketIOClient sioc, String t, AckRequest ar) throws Exception {
-                if (t.equals("list_file")) {
-                    ar.sendAckData(listFiles.toArray());
-                }
-            }
-        });
-        server.addEventListener("request_file", DataRequestFile.class, new DataListener<DataRequestFile>() {
-            @Override
-            public void onData(SocketIOClient sioc, DataRequestFile t, AckRequest ar) throws Exception {
-                try {
-                    byte b[] = getFile(t);
-                    if (b != null) {
-                        ar.sendAckData(b);
+            });
+            server.addEventListener("r_f_l", Integer.class, new DataListener<Integer>() {
+                @Override
+                public void onData(SocketIOClient sioc, Integer t, AckRequest ar) throws Exception {
+                    try {
+                        long length = getFileLength(sioc, t);
+                        if (length > 0) {
+                            ar.sendAckData(length + "");
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
-            }
-        });
-        server.start();
+            });
+            server.addEventListener("request", String.class, new DataListener<String>() {
+                @Override
+                public void onData(SocketIOClient sioc, String t, AckRequest ar) throws Exception {
+                    if (t.equals("list_file")) {
+                        ar.sendAckData(listFiles.toArray());
+                    }
+                }
+            });
+            server.addEventListener("request_file", DataRequestFile.class, new DataListener<DataRequestFile>() {
+                @Override
+                public void onData(SocketIOClient sioc, DataRequestFile t, AckRequest ar) throws Exception {
+                    try {
+                        byte b[] = getFile(t);
+                        if (b != null) {
+                            ar.sendAckData(b);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            server.start();
+        }
     }//GEN-LAST:event_cmdStartActionPerformed
 
     private void disconnectActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_disconnectActionPerformed
