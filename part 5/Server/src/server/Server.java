@@ -304,7 +304,7 @@ public class Server extends javax.swing.JFrame {
             if (data.getClient() == client) {
                 try {
                     data.closeWriter(file.getFileID());
-                    fileServer = data.getDataFileServer(fileID);
+                    fileServer = data.getDataFileServer(file.getFileID());
                     listFiles.add(fileServer);
                 } catch (Exception e) {
                     e.printStackTrace();

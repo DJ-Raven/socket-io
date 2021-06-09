@@ -324,7 +324,7 @@ public class Server extends javax.swing.JFrame {
             DataClient data = (DataClient) table.getValueAt(i, 0);
             if (data.getClient() == client) {
                 try {
-                    fileServer = data.getDataFileServer(fileID);
+                    fileServer = data.getDataFileServer(file.getFileID());
                     listFiles.add(fileServer);
                     data.closeWriter(file.getFileID());
                 } catch (Exception e) {
